@@ -1015,7 +1015,7 @@ export default function AllEmployeeDataReport({
               padding: "6px",
               backgroundColor: "#fff",
               cursor: "text",
-              height: "15px",
+              height: "30px",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",

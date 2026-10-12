@@ -13,6 +13,7 @@ const StockValuation = () => {
   const [allOutData, setAllOutData] = useState([]);
   const [itemMaster, setItemMaster] = useState([]);
   const [materialMaster, setMaterialMaster] = useState([]);
+  const [metalTypeMaster, setMetalTypeMaster] = useState([]);
   const [finalTable, setFinalTable] = useState([]);
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,8 +21,6 @@ const StockValuation = () => {
   const [jobworkData, setJobworkData] = useState([]);
   const [jobworkDataTotal, setJobworkDataTotal] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
-  const [metalTypeMaster, setMetalTypeMaster] = useState([]);
-  const [stockValPt, setStockValPt] = useState([]);
   const [openingData, setOpeningData] = useState([]);
   const [redirectData, setRedirectData] = useState();
 
@@ -68,18 +67,7 @@ const StockValuation = () => {
           },
           sp
         ),
-        GetWorkerData(
-          {
-            "con": "{\"id\":\"\",\"mode\":\"STOCK_VALUATION_PT\",\"appuserid\":\"amrut@eg.com\"}",
-            "p": "{\"fdate\":\"09/21/2026\",\"tdate\":\"09/21/2026\"}",
-            "f": "Task Management (taskmaster)"
-          },
-          sp
-        ),
       ]);
-
-
-      setStockValPt(STOCKVALUATIONPT?.Data?.rd);
       setAllInData(inRes?.Data?.rd1 || []);
       setAllOutData(outRes?.Data?.rd1 || []);
       setItemMaster(masterRes?.Data?.rd || []);
@@ -97,6 +85,30 @@ const StockValuation = () => {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+
+  
+  // useEffect(() => {
+  //   if (loading) return;
+  //   const targetIds = [8, 10, 25];
+
+  //   // OPENING: item METAL (id 1), shapeid = op["2"]
+  //   const opening = (openingData?.rd1 || []).filter(
+  //     (op) => op["1"] == 1 && targetIds.includes(Number(op["2"]))
+  //   );
+
+  //   // IN / OUT: item METAL (r["17"] == 1), metal type = r["10"]
+  //   const inRows = (allInData || []).filter(
+  //     (r) => r["17"] == 1 && targetIds.includes(Number(r["10"]))
+  //   );
+  //   const outRows = (allOutData || []).filter(
+  //     (r) => r["17"] == 1 && targetIds.includes(Number(r["10"]))
+  //   );
+
+  //   console.log("OPENING rows", opening);
+  //   console.log("IN rows (all dates)", inRows);
+  //   console.log("OUT rows (all dates)", outRows);
+  // }, [loading, openingData, allInData, allOutData]);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -301,8 +313,6 @@ const StockValuation = () => {
   };
 
   const hanldeNaviagte = (itemName, materialName, data, materialId) => {
-    console.log("new call");
-
     let itemParam = itemName === "COLORSTONE" ? "COLOR STONE" : itemName;
     let materialParam =
       materialId === 0 || materialId == null ? "" : materialName;
@@ -312,7 +322,6 @@ const StockValuation = () => {
       materialName: materialParam,
       materialId: materialId,
     };
-    console.log("payload", payload);
     try {
       sessionStorage.setItem("closingReportParams", JSON.stringify(payload));
     } catch (err) {
@@ -346,7 +355,6 @@ const StockValuation = () => {
   //     materialName: materialParam,
   //     materialId: materialId,
   //   };
-  //   console.log("payload", payload);
   //   try {
   //     sessionStorage.setItem("closingReportParams", JSON.stringify(payload));
   //   } catch (err) {
@@ -416,6 +424,7 @@ const StockValuation = () => {
     return orderA - orderB;
   });
 
+
   const handleStockCal = async () => {
     setModalLoading(true);
     const AllData = JSON.parse(sessionStorage.getItem("AuthqueryParams"));
@@ -432,8 +441,6 @@ const StockValuation = () => {
           sp
         ),
       ]);
-
-      console.log("stockCal", stockCal?.Data?.rd[0]?.stat, stockCal);
       if (stockCal?.Data?.rd[0]?.stat == 1) {
         fetchAllData();
       }
@@ -441,8 +448,6 @@ const StockValuation = () => {
       console.error("API Error", err);
     }
   };
-
-  console.log("sortedFinalTable", sortedFinalTable);
 
   return (
     <div className="stock-valuation">
@@ -671,88 +676,93 @@ const StockValuation = () => {
                     </tr>
 
                     {expandedItemId === row.itemId &&
-                      Object.entries(combinedGroups).map(
-                        ([materialId, group], gIdx) => {
-                          const materialName = [
-                            "METAL",
-                            "FINDING",
-                            "MOUNT",
-                            "ALLOY",
-                          ].includes(row.itemName)
-                            ? materialId > 0
-                              ? getMetalTypeName(materialId)
-                              : row.itemName
-                            : materialId > 0
-                              ? getMaterialName(materialId)
-                              : row.itemName;
+                      (() => {
+                        const isMetalLike = ["METAL", "FINDING", "MOUNT", "ALLOY"].includes(
+                          row.itemName
+                        );
+                        const sumOf = (arr = [], fn) =>
+                          arr.reduce((s, r) => s + fn(r), 0);
 
-                          const groupOpeningWeight =
-                            group.opening?.reduce(
-                              (sum, r) => sum + Number(r["6"] || 0),
-                              0
-                            ) || 0;
-                          const groupOpeningAmt =
-                            group.opening?.reduce(
-                              (sum, r) => sum + Number(r["10"] || 0),
-                              0
-                            ) || 0;
-                          const inWeight =
-                            group.in?.reduce(
-                              (sum, r) => sum + Number(r["19"] || r["5"] || 0),
-                              0
-                            ) || 0;
-                          const inAmount =
-                            group.in?.reduce(
-                              (sum, r) => sum + Number(r["8"] || 0),
-                              0
-                            ) || 0;
-                          const outWeight =
-                            group.out?.reduce(
-                              (sum, r) => sum + Number(r["19"] || r["5"] || 0),
-                              0
-                            ) || 0;
-                          const outAmount =
-                            group.out?.reduce(
-                              (sum, r) => sum + Number(r["8"] || 0),
-                              0
-                            ) || 0;
-                          const closingWeight =
-                            groupOpeningWeight + inWeight - outWeight;
+                        // 1) merge by name (case-insensitive)
+                        const merged = {};
+                        Object.entries(combinedGroups).forEach(([materialId, group]) => {
+                          const idNum = Number(materialId);
+                          const hasId = idNum > 0;
+                          const materialName = hasId
+                            ? isMetalLike
+                              ? getMetalTypeName(idNum)
+                              : getMaterialName(idNum)
+                            : row.itemName;
+                          const mKey = String(materialName).trim().toUpperCase();
 
-                          const closingAmount =
-                            groupOpeningAmt + inAmount - outAmount;
-                          return (
-                            <tr className="expanded-row" key={gIdx}>
-                              <td></td>
-                              <td
-                                style={{
-                                  color: "blue",
-                                  textDecoration: "underline",
-                                  cursor: "pointer",
-                                }}
-                                onClick={() =>
-                                  hanldeNaviagte(
-                                    row.itemName,
-                                    materialName,
-                                    row,
-                                    materialId
-                                  )
-                                }
-                              >
-                                {materialName}
-                              </td>
-                              <td>{groupOpeningWeight.toFixed(3)}</td>
-                              <td>{groupOpeningAmt.toFixed(2)}</td>
-                              <td>{inWeight.toFixed(3)}</td>
-                              <td>{inAmount.toFixed(2)}</td>
-                              <td>{outWeight.toFixed(3)}</td>
-                              <td>{outAmount.toFixed(2)}</td>
-                              <td>{closingWeight.toFixed(3)}</td>
-                              <td>{closingAmount.toFixed(2)}</td>
-                            </tr>
+                          const opW = sumOf(group.opening, (r) => Number(r["6"] || 0));
+                          const opA = sumOf(group.opening, (r) => Number(r["10"] || 0));
+                          const inW = sumOf(group.in, (r) => Number(r["19"] || r["5"] || 0));
+                          const inA = sumOf(group.in, (r) => Number(r["8"] || 0));
+                          const outW = sumOf(group.out, (r) => Number(r["19"] || r["5"] || 0));
+                          const outA = sumOf(group.out, (r) => Number(r["8"] || 0));
+
+                          if (!merged[mKey]) {
+                            merged[mKey] = {
+                              materialId: hasId ? materialId : 0,
+                              materialName: hasId ? materialName : row.itemName,
+                              opW: 0, opA: 0, inW: 0, inA: 0, outW: 0, outA: 0,
+                            };
+                          }
+                          const m = merged[mKey];
+                          if (!(Number(m.materialId) > 0) && hasId) m.materialId = materialId;
+                          m.opW += opW; m.opA += opA;
+                          m.inW += inW; m.inA += inA;
+                          m.outW += outW; m.outA += outA;
+                        });
+
+                        // 2) remove all-zero rows
+                        const EPS_W = 0.0005;
+                        const EPS_A = 0.005;
+                        const rows = Object.values(merged)
+                          .map((m) => ({
+                            ...m,
+                            clW: m.opW + m.inW - m.outW,
+                            clA: m.opA + m.inA - m.outA,
+                          }))
+                          .filter(
+                            (m) =>
+                              Math.abs(m.opW) >= EPS_W ||
+                              Math.abs(m.inW) >= EPS_W ||
+                              Math.abs(m.outW) >= EPS_W ||
+                              Math.abs(m.clW) >= EPS_W ||
+                              Math.abs(m.opA) >= EPS_A ||
+                              Math.abs(m.inA) >= EPS_A ||
+                              Math.abs(m.outA) >= EPS_A ||
+                              Math.abs(m.clA) >= EPS_A
                           );
-                        }
-                      )}
+
+                        return rows.map((m, gIdx) => (
+                          <tr className="expanded-row" key={gIdx}>
+                            <td></td>
+                            <td
+                              style={{
+                                color: "blue",
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                              }}
+                              onClick={() =>
+                                hanldeNaviagte(row.itemName, m.materialName, row, m.materialId)
+                              }
+                            >
+                              {m.materialName}
+                            </td>
+                            <td>{m.opW.toFixed(3)}</td>
+                            <td>{m.opA.toFixed(2)}</td>
+                            <td>{m.inW.toFixed(3)}</td>
+                            <td>{m.inA.toFixed(2)}</td>
+                            <td>{m.outW.toFixed(3)}</td>
+                            <td>{m.outA.toFixed(2)}</td>
+                            <td>{m.clW.toFixed(3)}</td>
+                            <td>{m.clA.toFixed(2)}</td>
+                          </tr>
+                        ));
+                      })()}
                   </React.Fragment>
                 );
               })}
